@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "Spell/Ability_Master.h"
+#include "../Public/AbilitySystem/Ability_Master.h"
 #include "AbilityUser.generated.h"
 
 

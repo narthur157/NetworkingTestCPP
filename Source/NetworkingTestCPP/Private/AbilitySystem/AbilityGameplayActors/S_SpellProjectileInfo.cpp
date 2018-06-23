@@ -1,3 +1,3 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "S_SpellProjectileInfo.h"
+#include "AbilitySystem/AbilityGameplayActors/S_SpellProjectileInfo.h"

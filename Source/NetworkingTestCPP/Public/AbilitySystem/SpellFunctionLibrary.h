@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-#include "S_SpellProjectileInfo.h"
-#include "S_SpellAOEInfo.h"
-#include "TargetTypes.h"
+#include "AbilityGameplayActors/S_SpellProjectileInfo.h"
+#include "AbilityGameplayActors/S_SpellAOEInfo.h"
+#include "AbilitySystem/TargetTypes.h"
 #include "NetworkingTestCPP.h"
 #include "SpellFunctionLibrary.generated.h"
 

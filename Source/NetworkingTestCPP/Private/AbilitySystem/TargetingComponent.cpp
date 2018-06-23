@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "TargetingComponent.h"
-#include "Ability_Master.h"
+#include "AbilitySystem/TargetingComponent.h"
+#include "AbilitySystem/Ability_Master.h"
 
 // Sets default values for this component's properties
 UTargetingComponent::UTargetingComponent()

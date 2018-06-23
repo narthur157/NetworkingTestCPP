@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Spell/Ability_Master.h"
+#include "AbilitySystem/Ability_Master.h"
 #include "S_GroundTarget.generated.h"
 /**
  * 

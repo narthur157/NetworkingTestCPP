@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "CooldownComponent.h"
+#include "AbilitySystem/CooldownComponent.h"
 #include "Engine/World.h"
 
 
