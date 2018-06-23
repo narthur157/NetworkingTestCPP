@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintAsyncActionBase.h"
-#include "TargetTypes.h"
-#include "SpellBookComponent.h"
-#include "AbilityTargeting.h"
+#include "AbilitySystem/TargetTypes.h"
+#include "AbilitySystem/SpellBookComponent.h"
+#include "AbilitySystem/AbilityTargeting.h"
 #include "WaitForTarget.generated.h"
 
 /**

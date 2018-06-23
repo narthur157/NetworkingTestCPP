@@ -9,7 +9,7 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
-#include "Spell/SpellBookComponent.h"
+#include "AbilitySystem/SpellBookComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/PlayerState.h"
 #include "Engine/World.h"

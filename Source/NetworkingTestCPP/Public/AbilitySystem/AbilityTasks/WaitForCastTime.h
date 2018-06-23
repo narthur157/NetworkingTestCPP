@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintAsyncActionBase.h"
-#include "Spell/Ability_Master.h"
+#include "AbilitySystem/Ability_Master.h"
 #include "Engine/TimelineTemplate.h"
 #include "ExtendableTimer.h"
 #include "WaitForCastTime.generated.h"

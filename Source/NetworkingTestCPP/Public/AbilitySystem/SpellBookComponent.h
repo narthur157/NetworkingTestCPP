@@ -6,7 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "Player/NetworkingTestCPPCharacter.h"
 #include "NetworkingTestCPP.h"
-#include "Spell/Ability_Master.h"
+#include "AbilitySystem/Ability_Master.h"
 #include "TargetTypes.h"
 #include "CooldownComponent.h"
 #include "SpellBookComponent.generated.h"

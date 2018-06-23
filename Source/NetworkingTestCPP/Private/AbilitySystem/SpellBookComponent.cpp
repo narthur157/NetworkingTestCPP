@@ -1,4 +1,4 @@
-#include "SpellBookComponent.h"
+#include "AbilitySystem/SpellBookComponent.h"
 #include "UnrealNetwork.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"

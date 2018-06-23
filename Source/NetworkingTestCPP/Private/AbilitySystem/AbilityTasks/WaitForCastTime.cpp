@@ -1,8 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "WaitForCastTime.h"
+#include "AbilitySystem/AbilityTasks/WaitForCastTime.h"
 #include "Runtime/Engine/Public/TimerManager.h"
-#include "Spell/SpellBookComponent.h"
+#include "AbilitySystem/SpellBookComponent.h"
 #include "Engine/World.h"
 
 

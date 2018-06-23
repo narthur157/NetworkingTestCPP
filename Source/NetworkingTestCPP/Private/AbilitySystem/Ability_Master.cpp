@@ -1,11 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Ability_Master.h"
+#include "AbilitySystem/Ability_Master.h"
 #include "Engine/World.h"
 #include "Player/NetworkingTestCPPCharacter.h"
-#include "Spell/SpellBookComponent.h"
-#include "TargetingComponent.h"
+#include "AbilitySystem/SpellBookComponent.h"
+#include "AbilitySystem/TargetingComponent.h"
 #include "EngineGlobals.h"
 
 
