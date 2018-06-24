@@ -16,9 +16,12 @@ USpellBookComponent::USpellBookComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
+
+	SpellBookOwner = Cast<IAbilityUser>(GetOwner());
 	// Create a manager for ability cooldowns
 	cooldownManager = NewObject<UCooldownComponent>();
 	cooldownManager->setParams(GetWorld());
+
 
 	//flag component for replication
 	bReplicates = true;
@@ -54,64 +57,41 @@ void USpellBookComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 /////////////////////////////////////////////////////////////////////
 // Trycast
 // returns - 1 if player cannot cast the spell at abilityID, returns the knownAbility index if player can cast
-// checks: if spell is known, spell on cooldown, player has enough resources, player is casting
 int32 USpellBookComponent::canUseAbility(int32 abilityID)
 {
-	// reference to the player who casted the spell (owner of spellbook), want to turn this into a more generic pawn later
-	ANetworkingTestCPPCharacter * OwningCharacter = Cast<ANetworkingTestCPPCharacter>(GetOwner());
-
-	// break if attempting to cast to the main player class fails, plz be more generic
-	if (OwningCharacter == nullptr)
-	{
-
-		UE_LOG(AbilitySystemInitialization, Verbose, TEXT("Spellbook owner cast is not valid"));
-		return -1;
-
-	}
-
+	
 	//make sure spell is known by looking up ID in knownAbilityIndex, -1 if not known
 	int32 knownAbilityIndex = -1;
 	knownAbilityIndex = findInKnownAbilities(abilityID);
 	if (knownAbilityIndex == -1)
 	{
-		UE_LOG(AbilitySystemInitialization, Verbose, TEXT("%s: Ability ID %d is not known"), abilityID);
+		UE_LOG(AbilitySystemInitialization, Verbose, TEXT("Ability %d is not known"), abilityID);
 		return -1;
 	}
 
 	//test if spell is on cooldown
 	if (isOnCooldown(abilityID))
 	{
-		UE_LOG(AbilitySystemInitialization, Verbose, TEXT("Ability ID %d is not known"), abilityID);
+		UE_LOG(AbilitySystemInitialization, Verbose, TEXT("Ability %d is not known"), abilityID);
 		return -1;
 
 	}
-
 
 	TSubclassOf<AAbility_Master>* referencedSpell = allPossibleAbilities.Find(abilityID);
-	//check if the casting character has enough resources to cast by passing in the default object
-	if (hasResourcesToCast(referencedSpell->GetDefaultObject(), OwningCharacter) == false)
+	if (!SpellBookOwner || !SpellBookOwner->Execute_CanUseAbility(GetOwner(), referencedSpell->GetDefaultObject()) )
 	{
-		return -1;
-	}
 
-	//make sure the current character is not casting
-	if (OwningCharacter->isCasting())
-	{
-		//UE_LOG(SpellCasting, Verbose, TEXT("Player is casting"));
-		return -1;
-	}
+		if (!SpellBookOwner)
+		{
+			// should never get called
+			UE_LOG(AbilitySystemInitialization, Fatal, TEXT("Ability %d failed CanCastSpell check, spellbook is invalid"), abilityID);
+		}
+		else
+		{
 
-	// currently cancel if player is targeting, probablly want to make it so that the old spell gets kicked from this
-	// state and the new spell is inserted
-	if (OwningCharacter->isTargeting())
-	{
-		//UE_LOG(SpellCasting, Verbose, TEXT("Player is targeting"));
-		return -1;
-	}
+			UE_LOG(AbilitySystemInitialization, Verbose, TEXT("Ability %d failed CanCastSpell check, CanUseAbility returned false"), abilityID);
 
-	if (OwningCharacter->isDisabled())
-	{
-		//UE_LOG(SpellCasting, Verbose, TEXT("Player is disabled"));
+		}
 		return -1;
 	}
 	//character can cast
@@ -126,12 +106,14 @@ int32 USpellBookComponent::canUseAbility(int32 abilityID)
 // tests to see if the spell is on cooldown, eventually this should test vs the number of charges that a spell has
 bool USpellBookComponent::isOnCooldown(int32 abilityID)
 {
-	if (cooldownManager->getNumberOfInstancesOfElement(getAbilityNameFromID(abilityID)) > 0)
+
+	if (cooldownManager && cooldownManager->getNumberOfInstancesOfElement(getAbilityNameFromID(abilityID)) > 0)
 	{
 
 		return true;
 
 	}
+	
 	else
 	{
 		return false;
@@ -156,70 +138,8 @@ bool USpellBookComponent::isKnown(int32 abilityID)
 
 UCooldownComponent* USpellBookComponent::getCooldownManager()
 {
-
+	
 	return cooldownManager;
-}
-
-
-
-// Check if the caster has enough of the resource type required by the spell in order to cast
-bool USpellBookComponent::hasResourcesToCast(AAbility_Master* Spell, ANetworkingTestCPPCharacter* Caster)
-{
-
-	//apply potential spellcost adjustments
-	float adjustedspellCost = Spell->getCurrentStage().cost * Caster->CharacterStats.AbilityCostReduction;
-
-	//switch to find spell resource type (Energy,Rage,Mana)
-	switch (Spell->getResourceType())
-	{
-
-	case EResourceTypes::Energy:
-
-		if (Caster->CharacterStats.Energy >= adjustedspellCost)
-		{
-			return true;
-		}
-		else
-		{
-			//UE_LOG(SpellCasting, Verbose, TEXT("Not enough Energy"));
-			return false;
-		}
-
-
-	case EResourceTypes::Mana:
-
-		if (Caster->CharacterStats.Mana >= adjustedspellCost) 
-		{
-
-			return true;
-		}
-		else
-		{
-			//UE_LOG(SpellCasting, Verbose, TEXT("Not enough mana"));
-
-			return false;
-		}
-
-
-	case EResourceTypes::Rage:
-
-		if (Caster->CharacterStats.Rage >= adjustedspellCost)
-		{
-
-			return true;
-		}
-		else
-		{
-			//UE_LOG(SpellCasting, Verbose, TEXT("Not enough Rage"));
-			return false;
-		}
-
-
-	default:
-		//UE_LOG(SpellCasting, Verbose, TEXT("Default can't cast case"));
-		return false;
-	}
-
 }
 
 
@@ -295,7 +215,8 @@ void USpellBookComponent::removeFromKnownAbilities_Implementation(int32 abilityI
 	int32 knownAbilityIndex = findInKnownAbilities(abilityID);
 
 	// remove if exists
-	if (knownAbilityIndex != -1) {
+	if (knownAbilityIndex != -1) 
+	{
 
 		knownAbilities.RemoveAt(knownAbilityIndex);
 
@@ -405,7 +326,6 @@ void USpellBookComponent::UseAbility_Implementation(int32 abilityID)
 
 	}
 
-	ANetworkingTestCPPCharacter * Caster = Cast<ANetworkingTestCPPCharacter>(GetOwner());
 	//if the player can cast the spell (has enough resources, knows spell, isn't currently busy)
 	int validKnownAbilityIndex = canUseAbility(abilityID);
 	if (validKnownAbilityIndex != -1)
@@ -417,7 +337,7 @@ void USpellBookComponent::UseAbility_Implementation(int32 abilityID)
 		FActorSpawnParameters SpellSpawnInfo;
 		UWorld* const World = GetWorld();
 		SpellSpawnInfo.Owner = CastingPlayer;
-		SpellSpawnInfo.Instigator = Cast<APawn>(Caster);
+		SpellSpawnInfo.Instigator = Cast<APawn>(CastingPlayer);
 
 		AAbility_Master* Spell = GetWorld()->SpawnActor<AAbility_Master>(*spellToCast, CastingPlayer->GetActorLocation(), CastingPlayer->GetActorRotation(), SpellSpawnInfo);
 

@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "../Public/AbilitySystem/Ability_Master.h"
+#include "AbilitySystem/Ability_Master.h"
 #include "AbilityUser.generated.h"
 
 
@@ -43,4 +43,9 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category = "AbilityUsage")
 		void onCasting(FName CastName, float duration, bool bShouldCountUp);
 	
+	// Bool which signifies if the character is currently able to cast
+	// This typically includes a check for resources/current player state
+	// Should not be implemented in SpellBook Component as we want to assume as little as possible about the attached Actor
+	UFUNCTION(BlueprintNativeEvent, Category = "AbilityUsage")
+		bool CanUseAbility(const AAbility_Master* Ability);
 };

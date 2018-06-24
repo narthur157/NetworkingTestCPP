@@ -6,9 +6,9 @@
 #include "Engine.h"
 
 //Logging for a that troublesome system
-DECLARE_LOG_CATEGORY_EXTERN(AbilitySystemInitialization, Log, All);
-DECLARE_LOG_CATEGORY_EXTERN(AbilitySystemRun, Log, All);
-DECLARE_LOG_CATEGORY_EXTERN(SpellCasting, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(AbilitySystemInitialization, Verbose, All);
+DECLARE_LOG_CATEGORY_EXTERN(AbilitySystemRun, Verbose, All);
+DECLARE_LOG_CATEGORY_EXTERN(SpellCasting, Verbose, All);
 
 #define NETMODE_WORLD (((GEngine == nullptr) || (GetWorld() == nullptr)) ? TEXT("") \
         : (GEngine->GetNetMode(GetWorld()) == NM_Client) ? TEXT("[Client] ") \
@@ -16,9 +16,3 @@ DECLARE_LOG_CATEGORY_EXTERN(SpellCasting, Log, All);
         : (GEngine->GetNetMode(GetWorld()) == NM_DedicatedServer) ? TEXT("[DedicatedServer] ") \
         : TEXT("[Standalone] "))
 
-enum ELogCategory
-{
-	LogInitialization,
-	LogRun
-
-};

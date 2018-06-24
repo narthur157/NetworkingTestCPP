@@ -8,6 +8,22 @@ public class NetworkingTestCPP : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay" });
+
+        PrivateIncludePaths.AddRange(
+            new string[] {
+
+                "NetworkingTestCPP/Private",
+               
+            }
+        );
+
+
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay" });
+
+
+
+
+
+
 	}
 }

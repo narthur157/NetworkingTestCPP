@@ -275,3 +275,9 @@ void ANetworkingTestCPPCharacter::onCasting_Implementation(FName CastName, float
 
 
 }
+
+bool ANetworkingTestCPPCharacter::CanUseAbility_Implementation(const AAbility_Master* AttemptedAbility)
+{
+
+	return true;
+}

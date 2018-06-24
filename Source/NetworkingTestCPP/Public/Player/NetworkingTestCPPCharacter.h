@@ -90,6 +90,10 @@ public:
 		virtual void onCasting_Implementation(FName CastName, float duration, bool bShouldCountUp);
 
 
+	UFUNCTION(BlueprintNativeEvent, Category = "Ability")
+		bool CanUseAbility(const AAbility_Master* AttemptedAbility);
+		virtual bool CanUseAbility_Implementation(const AAbility_Master* AttemptedAbility) override;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Stats")
 		FPlayerBaseStats CharacterStats;
 

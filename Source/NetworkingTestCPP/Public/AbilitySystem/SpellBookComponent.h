@@ -122,9 +122,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TrySpellCast")
 	bool isKnown(int32 abilityID);
 
-	UFUNCTION(BlueprintCallable, Category = "TrySpellCast")
-	bool hasResourcesToCast(AAbility_Master* Spell, ANetworkingTestCPPCharacter* Caster);
-
 	/////////////////////////////////////////////////////////////////////
 	// KnownAbilities operations
 	// AddToKnownAbilitiesArray
@@ -193,12 +190,13 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_ValidateAndBroadcastValidData(const FTargetDataHandle &Data);
 
+	
+
 
 protected:
 
 	// Called when the game starts
 	virtual void BeginPlay() override;
-
 
 	//abilityID, Class, Rank 
 	UPROPERTY(BlueprintReadOnly,  Category = "SpellCastVars", Replicated)
@@ -212,7 +210,7 @@ private:
 
 	AAbility_Master* currentlyCastingAbility;
 	UCooldownComponent * cooldownManager;
-	
+	IAbilityUser * SpellBookOwner;
 
 public:	
 
