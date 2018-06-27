@@ -7,8 +7,14 @@
 #include "CooldownComponent.generated.h"
 
 
+struct FAbilitybuffDebuffArrayElement;
+struct FAbilityCooldownElement;
+struct FAbilityCooldownContainer;
+class UCooldownComponent;
+
+
 USTRUCT(BlueprintType)
-struct FAbilitybuffDebuffArrayElement
+struct FAbilityCooldownArrayElement
 {
 
 	GENERATED_BODY()
@@ -43,6 +49,8 @@ struct FAbilityCooldownContainer
 
 	GENERATED_BODY()
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	FName ContainerName = "";
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	TArray<FAbilityCooldownElement> instances;
@@ -70,9 +78,25 @@ struct FAbilityCooldownContainer
 		}
 	}
 
-
+	bool isValidCooldown()
+	{
+		if (ContainerName == "")
+		{
+			return false;
+		}
+		else
+		{
+			return true;
+		}
+	}
 		
 };
+
+/* ---------------Cooldown Delegates--------------- */
+/* Fired when the cooldown manager has sucesfully added a new cooldown */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FNewCooldown, FName, CooldownName);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCooldownTick);
+
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class NETWORKINGTESTCPP_API UCooldownComponent : public UObject
@@ -87,27 +111,29 @@ protected:
 
 public:	
 	
+	UPROPERTY(BlueprintAssignable)
+	FNewCooldown newCooldown;
 
-	UFUNCTION(BlueprintPure, Category = "CooldownManagement")
+	UPROPERTY(BlueprintAssignable)
+	FCooldownTick cooldownUpdate;
+
+
 	FAbilityCooldownContainer getElementData(FName element);
-
-	UFUNCTION(BlueprintPure, Category = "CooldownManagement")
+	//name 
 	FAbilityCooldownElement getElementInstanceLeastTimeRemaining(FName element);
-
-	UFUNCTION(BlueprintPure, Category = "CooldownManagement")
+	FAbilityCooldownElement getElementInstanceMostTimeRemaining(FName element);
 	int32 getNumberOfInstancesOfElement(FName element);
-
-	UFUNCTION(BlueprintCallable, Category = "CooldownManagement")
 	void placeTagOnCooldown(FName ElementToAdd, float Duration);
+	void removeShortestChargeFromCooldown(FName ElementToRemove, int32 NumChargesToRemove);
+	void removeLongestChargeFromCooldown(FName ElementToRemove, int32 NumChargesToRemove);
 
-	UFUNCTION(BlueprintCallable, Category = "CooldownManagement")
-	void removeFromCooldown(FName ElementToRemove);
-
-	void setParams(UWorld * newWorld);
+	void Init(UWorld* World);
 	
 private:
 	//world which the spellbook exists in
 	UWorld * world;
+	
+
 	// need cooldowns with the least amount of time at index 0
 	void sortCooldownArray();
 
@@ -116,13 +142,14 @@ private:
 	void addToCooldownArray(float endTime, FName elementToAdd);
 	void addToCooldownMap(float startTime, float endTime, FName elementToAdd);
 
-	int32 getFirstIndexOfElementName(FName element);
+	int32 getFirstIndexOfElement(FName element);
+	int32 getLastIndexOfElement(FName element);
 
 	UFUNCTION()
-	void pingBuffDebuffArray();
+	void pingCooldownArray();
 
 	//storage 
-	TArray<FAbilitybuffDebuffArrayElement> buffDebuffArray;
+	TArray<FAbilityCooldownArrayElement> cooldownArray;
 	TMap<FName, FAbilityCooldownContainer> cooldownMap;
 
 };

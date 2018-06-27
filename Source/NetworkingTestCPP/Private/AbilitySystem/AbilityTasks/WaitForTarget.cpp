@@ -26,7 +26,7 @@ UWaitForTarget* UWaitForTarget::WaitForTarget(const UObject* WorldContextObject,
 void UWaitForTarget::Activate()
 {
 	owningSpellbook->TargetDispatcher.AddDynamic(this, &UWaitForTarget::ExecuteOnTargetDataRecieved);
-
+	Active = true;
 	if (owningSpellbook->GetOwnerRole() != ROLE_Authority)
 	{
 		
@@ -51,11 +51,16 @@ void UWaitForTarget::Activate()
 //exec pin
 void UWaitForTarget::ExecuteOnTargetDataRecieved(const FTargetDataHandle &Data)
 {
+	if (Active)
+	{
+		Active = false;
+		owningSpellbook->TargetingConfirmed.Broadcast();
+		targetingAbility->StopAnimation(targetingAbility->getTargetingAnimation());
+		
+		AbilityConfirmed.Broadcast(Data);
 
-
-	owningSpellbook->TargetingConfirmed.Broadcast();
-	targetingAbility->StopAnimation(targetingAbility->getTargetingAnimation());
-	AbilityConfirmed.Broadcast(Data);
+	}
+	
 
 }
 

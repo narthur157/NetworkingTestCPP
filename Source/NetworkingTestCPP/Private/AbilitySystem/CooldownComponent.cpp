@@ -7,15 +7,13 @@
 // Sets default values for this component's properties
 UCooldownComponent::UCooldownComponent()
 {
-
+	
 }
 
-// init params needed for object to function
-void UCooldownComponent::setParams(UWorld* newWorld)
+void UCooldownComponent::Init(UWorld * World)
 {
-	world = newWorld;
-
-
+	world = World;
+	
 }
 
 void UCooldownComponent::placeTagOnCooldown(FName ElementToAdd, float Duration)
@@ -23,44 +21,68 @@ void UCooldownComponent::placeTagOnCooldown(FName ElementToAdd, float Duration)
 	float startTime = world->GetTimeSeconds();
 	float endTime = startTime + Duration;
 
-	// add to the cooldown array for easy removal when the endtime comes
 	addToCooldownArray(endTime, ElementToAdd);
 	addToCooldownMap(startTime, endTime, ElementToAdd);
-
-	// start timer, if timer is not already running
+	newCooldown.Broadcast(ElementToAdd);
+	
 	if (world->GetTimerManager().IsTimerActive(cooldownTimer) != true)
 	{
 
-		FTimerDynamicDelegate buffDebuffTimer;
-		buffDebuffTimer.BindDynamic(this, &UCooldownComponent::pingBuffDebuffArray);
-		world->GetTimerManager().SetTimer(cooldownTimer, buffDebuffTimer, .01, true, 0);
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("timer started"));
-
+		FTimerDelegate cooldownTick;
+		cooldownTick.BindUFunction(this, FName("pingCooldownArray"));
+		world->GetTimerManager().SetTimer(cooldownTimer, cooldownTick, .01, true, 0);
+	
 	}
 
 }
 
-void UCooldownComponent::removeFromCooldown(FName ElementToRemove)
+void UCooldownComponent::removeShortestChargeFromCooldown(FName ElementToRemove, int32 NumChargesToRemove)
+{
+	
+	for (int i = 0; i < NumChargesToRemove; i++)
+	{
+		
+		int32 indexToRemove = getFirstIndexOfElement(ElementToRemove);
+		// if there exists an element in cooldown array
+		if (indexToRemove != -1)
+		{
+
+			cooldownArray.RemoveAt(indexToRemove, 1, true);
+			FAbilityCooldownContainer* ContainerToRemoveFrom = cooldownMap.Find(ElementToRemove);
+			ContainerToRemoveFrom->instances.RemoveAt(0, 1, true);
+			
+		}
+		// otherwise, there are no more charges to remove
+		else
+		{
+			break;
+		}
+	}
+}
+
+void UCooldownComponent::removeLongestChargeFromCooldown(FName ElementToRemove, int32 NumChargesToRemove)
 {
 
-	int32 indexToRemove = getFirstIndexOfElementName(ElementToRemove);
-	FAbilityCooldownContainer *mapElementToRemove = cooldownMap.Find(ElementToRemove);
-
-	if (mapElementToRemove->count() == 1)
+	for (int i = cooldownArray.Num()-1; i >= 0 ; i--)
 	{
 
-		cooldownMap.Remove(ElementToRemove);
-		UE_LOG(SpellCasting, Verbose, TEXT("Cooldown Removed"));
+		int32 indexToRemove = getLastIndexOfElement(ElementToRemove);
+		// if there exists an element in cooldown array
+		if (indexToRemove != -1)
+		{
+			cooldownArray.RemoveAt(indexToRemove, 1, true);
+			FAbilityCooldownContainer* ContainerToRemoveFrom = cooldownMap.Find(ElementToRemove);
+			ContainerToRemoveFrom->instances.RemoveAt(ContainerToRemoveFrom->count(), 1, false);
+
+		}
+		// otherwise, there are no more charges to remove
+		else
+		{
+			break;
+		}
+
+
 	}
-	else
-	{
-
-		cooldownMap[ElementToRemove].instances.RemoveAt(0, 1, true);
-
-	}
-
-	buffDebuffArray.RemoveAt(indexToRemove, 1, true);
-
 
 }
 
@@ -70,16 +92,34 @@ void UCooldownComponent::removeFromCooldown(FName ElementToRemove)
 
 void UCooldownComponent::addToCooldownArray(float endTime, FName elementToAdd)
 {
-	FAbilitybuffDebuffArrayElement newCooldown;
-	newCooldown.endTime = endTime;
-	newCooldown.elementName = elementToAdd;
-	buffDebuffArray.Add(newCooldown);
-	if (buffDebuffArray.Num() > 1)
+	FAbilityCooldownArrayElement newCooldownElement;
+	newCooldownElement.endTime = endTime;
+	newCooldownElement.elementName = elementToAdd;
+	cooldownArray.Add(newCooldownElement);
+	if (cooldownArray.Num() > 1)
 	{
 		sortCooldownArray();
 	}
 
 }
+
+int32 UCooldownComponent::getLastIndexOfElement(FName element)
+{
+
+	for (int i = cooldownArray.Num(); i >= 0; i--)
+	{
+		if (cooldownArray[i].elementName == element)
+		{
+			return i;
+		}
+
+	}
+	return -1;
+
+}
+
+
+
 
 void UCooldownComponent::addToCooldownMap(float startTime, float endTime, FName elementToAdd)
 {
@@ -105,17 +145,18 @@ void UCooldownComponent::addToCooldownMap(float startTime, float endTime, FName 
 	{
 
 		FAbilityCooldownContainer newCooldownEntry;
+		newCooldownEntry.ContainerName = elementToAdd;
 		newCooldownEntry.instances.Add(newCharge);
 		cooldownMap.Add(elementToAdd);
 		cooldownMap[elementToAdd] = newCooldownEntry;
 	}
 }
 
-int32 UCooldownComponent::getFirstIndexOfElementName(FName element)
+int32 UCooldownComponent::getFirstIndexOfElement(FName element)
 {
-	for (int i = 0; i < buffDebuffArray.Num(); i++)
+	for (int i = 0; i < cooldownArray.Num(); i++)
 	{
-		if (buffDebuffArray[i].elementName == element)
+		if (cooldownArray[i].elementName == element)
 		{
 			return i;
 		}
@@ -130,29 +171,41 @@ FAbilityCooldownElement UCooldownComponent::getElementInstanceLeastTimeRemaining
 }
 
 
-FAbilityCooldownContainer UCooldownComponent::getElementData(FName element)
+FAbilityCooldownElement UCooldownComponent::getElementInstanceMostTimeRemaining(FName element)
 {
-	FAbilityCooldownContainer * FoundElement = cooldownMap.Find(element);
-	return *FoundElement;
+
+	return cooldownMap.Find(element)->instances[getNumberOfInstancesOfElement(element) - 1];
 
 }
 
-// sorts the buffDebuffArray such that the element with the nearest endtime is at position 0 
+
+
+FAbilityCooldownContainer UCooldownComponent::getElementData(FName element)
+{
+	
+	FAbilityCooldownContainer FoundCooldown;
+	FoundCooldown = cooldownMap.FindRef(element);
+	
+	return FoundCooldown;
+
+}
+
+// sorts the cooldownArray such that the element with the nearest endtime is at position 0 
 void UCooldownComponent::sortCooldownArray()
 {
 
 	int j;
-	FAbilitybuffDebuffArrayElement temp;
+	FAbilityCooldownArrayElement temp;
 
-	for (int i = 0; i < buffDebuffArray.Num(); i++)
+	for (int i = 0; i < cooldownArray.Num(); i++)
 	{
 		j = i;
 
-		while (j > 0 && buffDebuffArray[j].endTime < buffDebuffArray[j - 1].endTime)
+		while (j > 0 && cooldownArray[j].endTime < cooldownArray[j - 1].endTime)
 		{
-			temp = buffDebuffArray[j];
-			buffDebuffArray[j] = buffDebuffArray[j - 1];
-			buffDebuffArray[j - 1] = temp;
+			temp = cooldownArray[j];
+			cooldownArray[j] = cooldownArray[j - 1];
+			cooldownArray[j - 1] = temp;
 			j--;
 		}
 	}
@@ -176,22 +229,23 @@ int32 UCooldownComponent::getNumberOfInstancesOfElement(FName element)
 
 
 // tests the first element of the array (one with smallest endtime after sorting), if the timer has expired, remove it
-// is used by timer
-void UCooldownComponent::pingBuffDebuffArray()
+// timer delegate function
+void UCooldownComponent::pingCooldownArray()
 {
 
 	//if there are no elements in the cooldown array, stop the timer and return
-	if (buffDebuffArray.Num() == 0)
+	if (cooldownArray.Num() == 0)
 	{
 
 		world->GetTimerManager().ClearTimer(cooldownTimer);
 		return;
 	}
 
-	if (buffDebuffArray[0].endTime <= world->GetTimeSeconds())
+	if (cooldownArray[0].endTime <= world->GetTimeSeconds())
 	{
 
-		removeFromCooldown(buffDebuffArray[0].elementName);
+		removeShortestChargeFromCooldown(cooldownArray[0].elementName, 1);
 	}
 
+	cooldownUpdate.Broadcast();
 }

@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine.h"
 
-//Logging for a that troublesome system
+//Logging 
 DECLARE_LOG_CATEGORY_EXTERN(AbilitySystemInitialization, Verbose, All);
 DECLARE_LOG_CATEGORY_EXTERN(AbilitySystemRun, Verbose, All);
 DECLARE_LOG_CATEGORY_EXTERN(SpellCasting, Verbose, All);

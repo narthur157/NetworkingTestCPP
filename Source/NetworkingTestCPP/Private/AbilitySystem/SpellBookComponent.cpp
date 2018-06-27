@@ -20,7 +20,7 @@ USpellBookComponent::USpellBookComponent()
 	SpellBookOwner = Cast<IAbilityUser>(GetOwner());
 	// Create a manager for ability cooldowns
 	cooldownManager = NewObject<UCooldownComponent>();
-	cooldownManager->setParams(GetWorld());
+	cooldownManager->Init(GetWorld());
 
 
 	//flag component for replication
@@ -65,14 +65,14 @@ int32 USpellBookComponent::canUseAbility(int32 abilityID)
 	knownAbilityIndex = findInKnownAbilities(abilityID);
 	if (knownAbilityIndex == -1)
 	{
-		UE_LOG(AbilitySystemInitialization, Verbose, TEXT("Ability %d is not known"), abilityID);
+		UE_LOG(AbilitySystemInitialization, Verbose, TEXT("Ability %d failed CanCastSpell check, is not known"), abilityID);
 		return -1;
 	}
 
 	//test if spell is on cooldown
 	if (isOnCooldown(abilityID))
 	{
-		UE_LOG(AbilitySystemInitialization, Verbose, TEXT("Ability %d is not known"), abilityID);
+		UE_LOG(AbilitySystemInitialization, Verbose, TEXT("Ability %d failed CanCastSpell check, is on cooldown"), abilityID);
 		return -1;
 
 	}
@@ -89,7 +89,7 @@ int32 USpellBookComponent::canUseAbility(int32 abilityID)
 		else
 		{
 
-			UE_LOG(AbilitySystemInitialization, Verbose, TEXT("Ability %d failed CanCastSpell check, CanUseAbility returned false"), abilityID);
+			UE_LOG(AbilitySystemInitialization, Verbose, TEXT("Ability %d failed CanCastSpell check, owner defined CanUseAbility returned false"), abilityID);
 
 		}
 		return -1;
@@ -97,7 +97,6 @@ int32 USpellBookComponent::canUseAbility(int32 abilityID)
 	//character can cast
 	else
 	{
-		//UE_LOG(SpellCasting, Verbose, TEXT("Spell cleared for casting"));
 		return knownAbilityIndex;
 	}
 
@@ -106,12 +105,24 @@ int32 USpellBookComponent::canUseAbility(int32 abilityID)
 // tests to see if the spell is on cooldown, eventually this should test vs the number of charges that a spell has
 bool USpellBookComponent::isOnCooldown(int32 abilityID)
 {
-
-	if (cooldownManager && cooldownManager->getNumberOfInstancesOfElement(getAbilityNameFromID(abilityID)) > 0)
+	AAbility_Master* Ability = allPossibleAbilities.Find(abilityID)->GetDefaultObject();
+	Ability->setRank(getAbilityRank(abilityID));
+	if (!Ability)
 	{
-
 		return true;
+	}
 
+	// if the ability has a tag on cooldown, or 
+	FAbilityCooldownContainer blockingElement = getBlockingElement(abilityID);
+	if (blockingElement.isValidCooldown() && blockingElement.ContainerName != Ability->getAbilityName())
+	{
+		return true;
+	}
+
+	// if the ability has some charges on cooldown, but not all charges on cooldown
+	else if (blockingElement.isValidCooldown() && blockingElement.ContainerName == Ability->getAbilityName() && blockingElement.count() == Ability->getCurrentStage().charges)
+	{
+		return true;
 	}
 	
 	else
@@ -272,7 +283,6 @@ void USpellBookComponent::ValidateAndBroadcastValidData(const FTargetDataHandle 
 
 	//Validate data somehow
 
-	
 
 }
 
@@ -287,6 +297,59 @@ bool USpellBookComponent::Server_ValidateAndBroadcastValidData_Validate(const FT
 
 	return true;
 
+}
+
+// useful to test if an ability is on cooldown or not, returns the longest blocking element if the ability is on cooldown
+// if none of an abilties blocking tags are on cooldown, then return number of instances of the abilities name (potential to be null as well)
+FAbilityCooldownContainer USpellBookComponent::getBlockingElement(int32 AbilityID)
+{
+	FAbilityCooldownContainer blockingElement;
+	TSubclassOf<AAbility_Master>* AbilityClass = allPossibleAbilities.Find(AbilityID);
+	if (!AbilityClass)
+	{
+		//ability doesnt exist in allpossibleabilities
+		return blockingElement;
+	}
+
+	AAbility_Master* Ability = AbilityClass->GetDefaultObject();
+	Ability->setRank(getAbilityRank(AbilityID));
+	Ability->getCurrentStage().AbilityBlockingTags;
+
+	TMap<FName, int32> Tags = Ability->getCurrentStage().AbilityBlockingTags;
+	TArray<FName> Keys;
+	Tags.GetKeys(Keys);
+	
+
+	for(int i = 0; i < Keys.Num(); i++)
+	{		
+		FAbilityCooldownContainer testContainer;
+		testContainer = cooldownManager->getElementData(Keys[i]);
+		
+		if (testContainer.isValidCooldown() && testContainer.count() == *Tags.Find(Keys[i]))
+		{
+			// if the element hasnt been set
+			if (!blockingElement.isValidCooldown())
+			{
+				blockingElement = testContainer;
+			}
+			// if the new element has a later endtime than the current blockingElement endtime
+			else if(blockingElement.instances[0].endTime < testContainer.instances[0].endTime)
+			{
+				blockingElement = testContainer;
+			}
+		}
+
+	}
+
+	if (!blockingElement.isValidCooldown())
+	{
+
+		return cooldownManager->getElementData(Ability->getAbilityName());
+	}
+	else
+	{
+		return blockingElement;
+	}
 }
 
 
@@ -444,6 +507,23 @@ AAbility_Master * USpellBookComponent::getCurrentlyCastingAbility()
 
 }
 
+TArray<FName> USpellBookComponent::GetAbilityBlockingTags(int32 AbilityID)
+{
+	AAbility_Master* Ability = allPossibleAbilities.Find(AbilityID)->GetDefaultObject();
+	TArray<FName> Keys;
+	
+	if (!Ability)
+	{
+		return Keys;
+	}
+
+	Ability->setRank(getAbilityRank(AbilityID));
+	Ability->getCurrentStage().AbilityBlockingTags.GetKeys(Keys);
+
+	return Keys;
+}
+
+
 // eventually spawn debuff on character that prevents movement if the spell requires the character to be rooted for the durationn of running/casting
 // using ACharacter is here probably bad honestly, need to rework that eventually, also not a huge fan of casting to Anetworkingntestcppcharacter, maybe implement some event 
 void USpellBookComponent::applyAbilityInputRules(FAbilityInputRules newRules)
@@ -479,6 +559,16 @@ void USpellBookComponent::applyAbilityInputRules(FAbilityInputRules newRules)
 	
 }
 
+AAbility_Master* USpellBookComponent::getAbilityDefaultObject(int32 AbilityID)
+{
+	AAbility_Master* Ability = allPossibleAbilities.Find(AbilityID)->GetDefaultObject();
+	if (!Ability)
+	{
+		return nullptr;
+	}
+	Ability->setRank(getAbilityRank(AbilityID));
+	return Ability;
+}
 
 FName USpellBookComponent::getAbilityNameFromID(int32 abilityID)
 {

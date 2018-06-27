@@ -43,7 +43,7 @@ protected:
 
 private:
 
-	
+	bool Active;
 	AAbility_Master * targetingAbility;
 	USpellBookComponent* owningSpellbook;
 	TSubclassOf <AAbilityTargeting> targetingClass;

@@ -48,7 +48,18 @@ void AAbility_Master::setAbilityID(int32 abilityID)
 
 }
 
+UTexture2D* AAbility_Master::getAbilityIcon()
+{
+	if (getCurrentStage().overrideAbilityIcon)
+	{
+		return getCurrentStage().overrideAbilityIcon;
 
+	}
+	else
+	{
+		return abilityParameters.abilityIcon;
+	}
+}
 
 UAnimMontage* AAbility_Master::getTargetingAnimation()
 {

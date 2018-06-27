@@ -7,6 +7,7 @@
 #include "AbilityGameplayActors/S_SpellProjectileInfo.h"
 #include "AbilityGameplayActors/S_SpellAOEInfo.h"
 #include "AbilitySystem/TargetTypes.h"
+#include "AbilitySystem/CooldownComponent.h"
 #include "NetworkingTestCPP.h"
 #include "SpellFunctionLibrary.generated.h"
 
@@ -51,10 +52,16 @@ public:
 
 		}
 
+		// determines if a cooldowncontainer is valid, workaround because we cant call this in blueprints lol
+		UFUNCTION(BlueprintPure, Category = "AbilityHelper")
+		static bool IsValidCooldown(FAbilityCooldownContainer& Cooldown)
+		{
+			return Cooldown.isValidCooldown();
+		}
+
 		////////////////////////////////////////////////////////////////
 		// Target Data Handle Operations
 		// Cannot use structure methods in blueprint, workaround
-
 		UFUNCTION(BlueprintPure, Category = "Targeting Data")
 		static bool HasValidData(FTargetDataHandle Data)
 		{

@@ -75,6 +75,9 @@ struct FAbilityStage
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
+		int32 charges = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
 		float cost;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
@@ -95,6 +98,9 @@ struct FAbilityStage
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
 		FAbilityInputRules runningInputRules;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
+		TMap<FName, int32> AbilityBlockingTags;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
 		UTexture2D* overrideAbilityIcon;
 
@@ -103,6 +109,8 @@ struct FAbilityStage
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
 		UAnimMontage* overrideCastingAnimationSequence;
+
+	
 
 
 };
@@ -147,6 +155,7 @@ struct FAbilityBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SpellBase")
 		TArray<FAbilityStage> abilityStages;
+
 
 
 };
@@ -214,6 +223,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "AbilityHelper")
 	FName getAbilityName();
+
+	UFUNCTION(BlueprintPure, Category = "AbilityHelper")
+	UTexture2D* getAbilityIcon();
 
 	UFUNCTION(BlueprintPure, Category = "AbilityHelper")
 	FAbilityStage getCurrentStage();

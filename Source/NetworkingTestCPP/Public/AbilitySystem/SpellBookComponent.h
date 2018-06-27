@@ -11,23 +11,46 @@
 #include "CooldownComponent.h"
 #include "SpellBookComponent.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FValidTargetDataReady, const FTargetDataHandle&, Data);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FConfirmAbility);
+struct FKnownAbility;
+class USpellBookComponent;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCastingUpdate, float, TimeElapsed, float, TotalDuration);
+
+/* Generic confirm delegate */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FConfirmAbility);
+/*Generic cancel delegate, NOT IMPLEMENTED */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCancelAbility);
+
+
+/* Character defined Delegates, bind character functions to these to implement character-specific functionality on spellbook events */
+/* Some(Most?) of these have the potential to be turned into IAbilityUser interface calls */
+
+
+/* ---------------Casting Delegates--------------- */
+/*Fired when an ability has requested cast time */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCastingBegin, AAbility_Master*, CastingAbility);
+/* Fired every tick of a cast bar, tick intervals defined in WaitForCastTime */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCastingUpdate, float, TimeElapsed, float, TotalDuration);
+/* Fired when a cast is completed */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCastCompleted, AAbility_Master*, CastingAbility);
+/* Fired when a cast is cancelled */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCastCancelled, AAbility_Master*, CastingAbility);
 
 
+/* ---------------Targeting Delegates--------------- */
+/* Fired when an ability has requested time to target */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTargetingBegin);
+/* Fired when an abilities targeting phase has sucessfully completed (we recieved valid target data) */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTargetingCompleted);
+/*Fired when an ability has been cancelled while targeting*/
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTargetingCancelled);
+/* Fired on both server and client from ValidateAndBroadcastTargetData, this delegate will cause WaitForTargetData to complete and data to be passed into the reset of the ability */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FValidTargetDataReady, const FTargetDataHandle&, Data);
 
 
+/* ---------------Misc Delegates--------------- */
+/* Requests to play/stop animations, don't feel comfortable having ability run a playanim node, let the character do it */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPlayAnimation, UAnimMontage*, Anim, float, PlayRate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStopAnimation, UAnimMontage*, Anim);
-
 
 
 
@@ -100,6 +123,8 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FTargetingCancelled TargetingCancelled;
 
+	UPROPERTY(BlueprintAssignable)
+	FNewCooldown NewCooldown;
 	
 
 	// Sets default values for this component's properties
@@ -149,6 +174,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CooldownManagement")
 	void placeAbilityOnCooldownWithModifier(AAbility_Master* abilityToPlace, float CooldownModifier);
 
+	UFUNCTION(BlueprintPure, Category = "AbilityHelper")
+	FAbilityCooldownContainer getBlockingElement(int32 AbilityID);
+
 	/////////////////////////////////////////////////////////////////////
 	// Ability Operations
 	// UseAbility
@@ -179,16 +207,22 @@ public:
 	void applyAbilityInputRules(FAbilityInputRules newRules);
 	UFUNCTION(BlueprintPure, Category = "KnownAbilities")
 	int32 getAbilityRank(int32 abilityID);
+	UFUNCTION(BlueprintPure, Category = "KnownAbilitiies")
+	TArray<FName> GetAbilityBlockingTags(int32 AbilityID);
 
 	// returns "None" if ability ID is not valid
 	UFUNCTION(BlueprintPure, Category = "AbilityHelper")
 	FName getAbilityNameFromID(int32 abilityID);
+
+	UFUNCTION(BlueprintPure, Category = "AbilityHelper")
+	AAbility_Master* getAbilityDefaultObject(int32 AbilityID);
 
 	// Fires valid data 
 	UFUNCTION()
 	void ValidateAndBroadcastValidData(const FTargetDataHandle &Data);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_ValidateAndBroadcastValidData(const FTargetDataHandle &Data);
+
 
 	
 
