@@ -20,9 +20,7 @@ void UCooldownComponent::placeTagOnCooldown(FName ElementToAdd, float Duration)
 {
 	float startTime = world->GetTimeSeconds();
 	float endTime = startTime + Duration;
-
-	addToCooldownArray(endTime, ElementToAdd);
-	addToCooldownMap(startTime, endTime, ElementToAdd);
+	disableTag(startTime, endTime, ElementToAdd);
 	newCooldown.Broadcast(ElementToAdd);
 	
 	if (world->GetTimerManager().IsTimerActive(cooldownTimer) != true)
@@ -32,6 +30,85 @@ void UCooldownComponent::placeTagOnCooldown(FName ElementToAdd, float Duration)
 		cooldownTick.BindUFunction(this, FName("pingCooldownArray"));
 		world->GetTimerManager().SetTimer(cooldownTimer, cooldownTick, .01, true, 0);
 	
+	}
+
+}
+
+void UCooldownComponent::disableTag(float startTime, float endTime, FName elementToAdd)
+{
+
+	FAbilityCooldownElement newCharge;
+	newCharge.startTime = world->GetTimeSeconds();
+	newCharge.endTime = endTime;
+	newCharge.elementName = elementToAdd;
+
+	cooldownArray.Add(newCharge);
+	if (cooldownArray.Num() > 1)
+	{
+		sortCooldownArray();
+	}
+
+	// if the spell already exists in the cooldown array (multi-charge spell, we are putting another charge on cooldown)
+	if (cooldownMap.Contains(elementToAdd))
+	{
+
+		cooldownMap[elementToAdd].instances.Add(newCharge);
+		if (cooldownMap[elementToAdd].count() > 1)
+		{
+			cooldownMap[elementToAdd].sortInstances();
+		}
+
+	}
+
+	// the spell does not exist in the cooldown array, this is the first instance we've seen of it
+	else
+	{
+		FAbilityCooldownContainer newCooldownEntry;
+		newCooldownEntry.ContainerName = elementToAdd;
+		newCooldownEntry.instances.Add(newCharge);
+		cooldownMap.Add(elementToAdd);
+		cooldownMap[elementToAdd] = newCooldownEntry;
+	}
+}
+
+
+///////////////////////////////////////////////////////
+// Helper Functions
+FAbilityCooldownContainer UCooldownComponent::getElementData(FName element) const
+{
+
+	FAbilityCooldownContainer FoundCooldown;
+	FoundCooldown = cooldownMap.FindRef(element);
+
+	return FoundCooldown;
+
+}
+
+FAbilityCooldownElement UCooldownComponent::getElementInstanceLeastTimeRemaining(FName element) const
+{
+	return cooldownMap.Find(element)->instances[0];
+}
+
+
+FAbilityCooldownElement UCooldownComponent::getElementInstanceMostTimeRemaining(FName element) const
+{
+
+	return cooldownMap.Find(element)->instances[getNumberOfInstancesOfElement(element) - 1];
+
+}
+
+
+int32 UCooldownComponent::getNumberOfInstancesOfElement(FName element) const
+{
+	if (cooldownMap.Find(element))
+	{
+
+		return cooldownMap.Find(element)->count();
+
+	}
+	else
+	{
+		return 0;
 	}
 
 }
@@ -86,116 +163,14 @@ void UCooldownComponent::removeLongestChargeFromCooldown(FName ElementToRemove, 
 
 }
 
-
 ///////////////////////////////////////////////////////
-// Helper Functions
-
-void UCooldownComponent::addToCooldownArray(float endTime, FName elementToAdd)
-{
-	FAbilityCooldownArrayElement newCooldownElement;
-	newCooldownElement.endTime = endTime;
-	newCooldownElement.elementName = elementToAdd;
-	cooldownArray.Add(newCooldownElement);
-	if (cooldownArray.Num() > 1)
-	{
-		sortCooldownArray();
-	}
-
-}
-
-int32 UCooldownComponent::getLastIndexOfElement(FName element)
-{
-
-	for (int i = cooldownArray.Num(); i >= 0; i--)
-	{
-		if (cooldownArray[i].elementName == element)
-		{
-			return i;
-		}
-
-	}
-	return -1;
-
-}
-
-
-
-
-void UCooldownComponent::addToCooldownMap(float startTime, float endTime, FName elementToAdd)
-{
-
-	FAbilityCooldownElement newCharge;
-	newCharge.startTime = world->GetTimeSeconds();
-	newCharge.endTime = endTime;
-
-	// if the spell already exists in the cooldown array (multi-charge spell, we are putting another charge on cooldown)
-	if (cooldownMap.Contains(elementToAdd))
-	{
-
-		cooldownMap[elementToAdd].instances.Add(newCharge);
-
-		if (cooldownMap[elementToAdd].count() > 1)
-		{
-			cooldownMap[elementToAdd].sortInstances();
-		}
-
-	}
-	// the spell does not exist in the cooldown array, this is the first instance we've seen of it
-	else
-	{
-
-		FAbilityCooldownContainer newCooldownEntry;
-		newCooldownEntry.ContainerName = elementToAdd;
-		newCooldownEntry.instances.Add(newCharge);
-		cooldownMap.Add(elementToAdd);
-		cooldownMap[elementToAdd] = newCooldownEntry;
-	}
-}
-
-int32 UCooldownComponent::getFirstIndexOfElement(FName element)
-{
-	for (int i = 0; i < cooldownArray.Num(); i++)
-	{
-		if (cooldownArray[i].elementName == element)
-		{
-			return i;
-		}
-
-	}
-	return -1;
-}
-
-FAbilityCooldownElement UCooldownComponent::getElementInstanceLeastTimeRemaining(FName element)
-{
-	return cooldownMap.Find(element)->instances[0];
-}
-
-
-FAbilityCooldownElement UCooldownComponent::getElementInstanceMostTimeRemaining(FName element)
-{
-
-	return cooldownMap.Find(element)->instances[getNumberOfInstancesOfElement(element) - 1];
-
-}
-
-
-
-FAbilityCooldownContainer UCooldownComponent::getElementData(FName element)
-{
-	
-	FAbilityCooldownContainer FoundCooldown;
-	FoundCooldown = cooldownMap.FindRef(element);
-	
-	return FoundCooldown;
-
-}
-
-// sorts the cooldownArray such that the element with the nearest endtime is at position 0 
+// Private Functions
+// Using Insertion Sort
 void UCooldownComponent::sortCooldownArray()
 {
 
 	int j;
-	FAbilityCooldownArrayElement temp;
+	FAbilityCooldownElement temp;
 
 	for (int i = 0; i < cooldownArray.Num(); i++)
 	{
@@ -212,24 +187,36 @@ void UCooldownComponent::sortCooldownArray()
 
 }
 
-int32 UCooldownComponent::getNumberOfInstancesOfElement(FName element)
+
+int32 UCooldownComponent::getFirstIndexOfElement(FName element) const
 {
-	if (cooldownMap.Find(element))
+	for (int i = 0; i < cooldownArray.Num(); i++)
 	{
-
-		return cooldownMap.Find(element)->count();
+		if (cooldownArray[i].elementName == element)
+		{
+			return i;
+		}
 
 	}
-	else
+	return -1;
+}
+
+int32 UCooldownComponent::getLastIndexOfElement(FName element) const
+{
+
+	for (int i = cooldownArray.Num(); i >= 0; i--)
 	{
-		return 0;
+		if (cooldownArray[i].elementName == element)
+		{
+			return i;
+		}
+
 	}
+	return -1;
 
 }
 
 
-// tests the first element of the array (one with smallest endtime after sorting), if the timer has expired, remove it
-// timer delegate function
 void UCooldownComponent::pingCooldownArray()
 {
 
