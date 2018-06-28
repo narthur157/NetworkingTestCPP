@@ -12,9 +12,9 @@ class UCooldownComponent;
 
 
 /*-----------------------------------  CooldownManager  -----------------------------------*/
-/* -Manages the disabling of elements												       */		
-/* -Whenever the number of instances of an element in cooldownArray					       */
-/*	is equal to the blocking amount specified by the ability, that ability is blocked      */
+/* -Manages the disabling of elements                                                      */		
+/* -Whenever the number of instances of an element in cooldownArray                        */
+/*  is equal to the blocking amount specified by the ability, that ability is blocked      */
 /* -Utilizes a ticking delegate to compare the current time vs the time of the element at  */
 /*  index 0 of the sorted cooldownArray, if they are equal, that instance is removed       */
 /* -Use cooldownMap for quick lookups to determine the state of any particular element     */
